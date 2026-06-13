@@ -1,0 +1,53 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mailmind_user
+          POSTGRES_PASSWORD: mailmind123
+          POSTGRES_DB: mailmind
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          RESEND_API_KEY: re_test_key
+          RESEND_WEBHOOK_SECRET: test_webhook_secret_base64
+          GROQ_API_KEY: gsk_test_key
+          LLM_MODEL: llama-3.1-8b-instant
+          DATABASE_URL: postgresql://mailmind_user:mailmind123@localhost:5432/mailmind
+          HITL_CONFIDENCE_THRESHOLD: "0.75"
+        run: uv run pytest tests/ -v --tb=short
