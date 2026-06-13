@@ -7,8 +7,11 @@ from api.hitl import router as hitl_router
 from api.kb import router as kb_router
 from api.logs import router as logs_router
 from api.rules import router as rules_router
+from api.auth import router as auth_router
 from api.stream import router as stream_router
 from api.webhook import router as webhook_router
+
+
 from config import get_settings
 from models import create_db_and_tables
 
@@ -24,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(webhook_router)
+app.include_router(auth_router)
 app.include_router(logs_router)
 app.include_router(rules_router)
 app.include_router(hitl_router)
