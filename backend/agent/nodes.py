@@ -26,13 +26,16 @@ def _emit_node_event(
 
 def fetch_content_node(state: EmailAgentState) -> EmailAgentState:
     try:
-        state["body"] = resend_client.get_email_body(state["email_id"])
+        if not state.get("body"):
+            state["body"] = resend_client.get_email_body(state["email_id"])
         state["attachments"] = resend_client.get_attachments(state["email_id"])
     except Exception as exc:
-        state["error"] = f"fetch_content_failed: {exc}"
-        LOGGER.exception(
-            "Failed to fetch email content for email_id=%s", state["email_id"]
+        LOGGER.warning(
+            "Could not fetch email content for email_id=%s, using subject only: %s",
+            state["email_id"], exc
         )
+        if not state.get("attachments"):
+            state["attachments"] = []
 
     _emit_node_event(
         state,
@@ -63,14 +66,23 @@ def classify_node(state: EmailAgentState) -> EmailAgentState:
         )
         structured_llm = llm.with_structured_output(
             EmailClassification,
-            method="json_schema",
+            method="json_mode",
         )
 
         parsed = structured_llm.invoke(
             [
                 {
                     "role": "system",
-                    "content": "You are an email intent classifier. Extract structured metadata from the email.",
+                    "content": (
+                        "You are an email intent classifier. "
+                        "Analyze the email and return a JSON object with exactly these fields:\n"
+                        "- intent: one of 'invoice', 'support_query', 'meeting_request', 'spam', 'urgent_alert', 'general'\n"
+                        "- urgency: integer from 1 (low) to 5 (high)\n"
+                        "- summary: one sentence summary of the email\n"
+                        "- entities: dict of named entities like names, amounts, dates (can be empty {})\n"
+                        "- confidence: float from 0.0 to 1.0 indicating classification confidence\n"
+                        "Return only valid JSON matching these fields exactly."
+                    ),
                 },
                 {"role": "user", "content": user_content},
             ]

@@ -44,12 +44,18 @@ async def resend_webhook(request: Request) -> dict[str, str]:
         raise HTTPException(
             status_code=400, detail="Missing email_id in webhook payload"
         )
-    _to_addr = str(data.get("to", ""))
 
+    # Extract body directly from webhook payload instead of fetching separately
+    body = str(data.get("text") or data.get("html") or data.get("body") or "")
+    print("DEBUG webhook data keys:", list(data.keys()))
+    print("DEBUG body length:", len(body))
+    print("DEBUG body preview:", body[:200])
+    
     initial_state = build_initial_state(
         email_id=email_id,
         from_addr=str(data.get("from", "")),
         subject=str(data.get("subject", "")),
+        body=body,
     )
 
     await get_email_agent().ainvoke(
