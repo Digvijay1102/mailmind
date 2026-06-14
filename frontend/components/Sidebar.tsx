@@ -8,7 +8,10 @@ const items = [
   { href: "/hitl", label: "HITL Queue" },
   { href: "/rules", label: "Rules" },
   { href: "/kb", label: "KB Upload" },
+  { href: "/metrics", label: "Metrics" },
 ];
+
+export default Sidebar;
 
 export function Sidebar() {
   const pathname = usePathname();
